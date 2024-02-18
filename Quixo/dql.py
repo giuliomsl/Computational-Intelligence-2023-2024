@@ -104,35 +104,26 @@ class DQNAgent(Player):
 
 
     def index_to_move(self, action_index, game):
-        """
-        Converte un indice di azione in una mossa specifica, assicurandosi che la mossa sia valida.
-        """
-        # Ottieni l'elenco attuale delle mosse possibili e valide per il giocatore corrente.
+        
+        # Converte un indice di azione in una mossa specifica, assicurandosi che la mossa sia valida.
+       
         possible_moves = get_possible_moves(game.get_board(), self.player_index)
 
-        # Assicurati che l'indice dell'azione sia entro i limiti dell'elenco delle mosse possibili.
         if action_index >= 0 and action_index < len(possible_moves):
             return possible_moves[action_index]
         else:
-            # Se l'indice di azione non è valido, scegli una mossa casuale dall'elenco delle mosse valide.
-            # Questo caso può verificarsi se, per qualche motivo, l'azione scelta è fuori range.
-            # È importante gestire questo caso per evitare errori di runtime.
+           
             return random.choice(possible_moves)
         
     def calculate_reward(self, game):
         winner = game.check_winner()
         if winner == self.player_index:
-            # Ricompensa positiva per la vittoria
             return 1
         elif winner == -2:
-            # Ricompensa neutra o leggermente negativa per il pareggio
             return 0
         elif winner != -1:
-            # Penalità per la sconfitta
             return -1
         else:
-            # Nessuna ricompensa o penalità immediata se il gioco non è ancora finito
-            # Potresti voler aggiungere logica qui per ricompense intermedie basate sullo stato del gioco
             return 0
 
     def step(board, action, player_index):
