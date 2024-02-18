@@ -14,38 +14,15 @@ class RandomPlayer(Player):
         move = random.choice([Move.TOP, Move.BOTTOM, Move.LEFT, Move.RIGHT])
         return from_pos, move
 
-
 class MiniMaxPlayer(Player):
     def __init__(self, depth: int, player_index) -> None:
         super().__init__()
         self.depth = depth
         self.player_index = player_index
 
-    def count_aligned(self, board, player_id, exact_count=4):
-        max_aligned = 0
-        exact_aligned_count = 0
-        board_size = len(board)
-
-        # check rows, cols and diags
-        for i in range(board_size):
-            row_count = sum(board[i] == player_id)
-            col_count = sum(board[:, i] == player_id)
-            max_aligned = max(max_aligned, row_count, col_count)
-            if row_count == exact_count or col_count == exact_count:
-                exact_aligned_count += 1
-
-        # diags
-        diag_count = sum(board[i, i] == player_id for i in range(board_size))
-        anti_diag_count = sum(board[i, board_size - i - 1] == player_id for i in range(board_size))
-        max_aligned = max(max_aligned, diag_count, anti_diag_count)
-        if diag_count == exact_count or anti_diag_count == exact_count:
-            exact_aligned_count += 1
-
-        return max_aligned, exact_aligned_count
-
     def evaluate_game_state(self, board):
-        player_score, player_4_in_row = self.count_aligned(board, self.player_index, 4)
-        opponent_score, opponent_4_in_row = self.count_aligned(board, 1 - self.player_index, 4)
+        player_score, player_4_in_row = count_aligned(board, self.player_index, 4)
+        opponent_score, opponent_4_in_row = count_aligned(board, 1 - self.player_index, 4)
 
         # evaluation of important pieces (corners) and alligned pieces
 
@@ -58,14 +35,12 @@ class MiniMaxPlayer(Player):
                 strategic_value -= 1
 
         # critical situations
-        if opponent_4_in_row > 0:
+        if opponent_4_in_row:
             return -10  # avoid opponent's win
-        if player_4_in_row > 0:
+        if player_4_in_row:
             return 10   # win the game
 
         return player_score - opponent_score + strategic_value
-
-
 
 
     def minimax(self, board, depth, alpha, beta, maximizing_player):
@@ -116,11 +91,38 @@ class MiniMaxPlayer(Player):
 
 if __name__ == "__main__":
     wins = 0
+    draws = 0
+    losses = 0
     games = 100
     for i in tqdm(range(games)):
         game = Game()
-        player1 = MiniMaxPlayer(5, 0)
+        player1 = MiniMaxPlayer(3, 1)
         player2 = RandomPlayer()
-        if game.play(player1, player2) == 0:
+        winner = game.play(player1, player2)
+        
+        if winner == player1.player_index:
+            game_result = "win"
             wins += 1
-    print(f"Percentuale vittorie: {100 * wins / games}")
+        elif winner == 2:  
+            game_result = "draw"
+            draws += 1 
+        else:
+            game_result = "lose"
+            losses += 1
+    print(f"Percentuale vittorie: {wins / games * 100}%")
+    print(f"Percentuale pareggi: {draws / games * 100}%") 
+    print(f"Percentuale sconfitte: {losses / games * 100}%")
+    
+    # depth = 5 has a great win rate (between 75% and 95%), almost 20 seconds per game
+
+#   depth = 5 vs. Random
+# 100%|███████████████████████████████████████████████████████████████████████████| 100/100 [31:16<00:00, 18.76s/it]
+# Percentuale vittorie: 94.0
+# Percentuale pareggi: 0.0%
+# Percentuale sconfitte: 6.0%
+    
+#   depth = 3 vs. Random
+# 100%|███████████████████████████████████████████████████████████████████████████| 100/100 [03:04<00:00,  1.85s/it]
+# Percentuale vittorie: 86.0%
+# Percentuale pareggi: 0.0%
+# Percentuale sconfitte: 14.0%
