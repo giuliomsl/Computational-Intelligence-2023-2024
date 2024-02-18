@@ -37,8 +37,7 @@ class Player(ABC):
 class Game(object):
     def __init__(self) -> None:
         self._board = np.ones((5, 5), dtype=np.uint8) * -1
-        self.current_player_idx = 1
-        print(self._board)
+        self.starting_player_index = 0
 
     def get_board(self):
         '''
@@ -88,36 +87,69 @@ class Game(object):
         ):
             # return the relative id
             return self._board[0, -1]
-        return -1
+        if not np.any(self._board == -1):  # False se non ci sono caselle con -1
+            return -2  # pareggio
+        
+        return -1  # Nessun vincitore trovato e la partita non è ancora finita in pareggio
 
-    def play(self, player1: Player, player2: Player) -> int:
-        '''Play the game. Returns the winning player'''
+    def play(self, player1: Player, player2: Player, max_moves=1000) -> int:
+        '''Play the game. Returns the winning player or -2 in case of a draw'''
         players = [player1, player2]
+        self.current_player_idx = self.starting_player_index
         winner = -1
-        while winner < 0:
-            self.current_player_idx += 1
-            self.current_player_idx %= len(players)
+        move_count = 0
+        while winner == -1 and move_count < max_moves:
             #print(f"Current player index: {self.current_player_idx}")
+            
+            self.current_player_idx = 1 - self.current_player_idx
+
+            if self.current_player_idx == 0:
+                player = "AGENT"
+            else:
+                player = "RANDOM"
+
             ok = False
-            while not ok:
-                from_pos, slide = players[self.current_player_idx].make_move(
-                    self)
+            while not ok and move_count < max_moves:
+                from_pos, slide = players[self.current_player_idx].make_move(self)
+                #from_pos = (from_pos[1], from_pos[0])
+                #self.print()
                 ok = self.__move(from_pos, slide, self.current_player_idx)
+                
+                if ok: 
+                    #print(f"√ {player} MOSSA: RIGA {from_pos[1]}, COLONNA: {from_pos[0]}, slide: {slide}")
+                    move_count += 1
+                    #self.print()
+                    #print(f"-----------------NUMERO MOSSE: {move_count}")
+                #else: 
+                    #print(f"{player} MOSSA NON VALIDA {from_pos, slide}")
+                    #self.print()
             winner = self.check_winner()
-        self.print()
-        print(f"Winner is {winner}")
+        if winner == -2 or move_count >= max_moves:
+            winner = -2
+            #print("Draw!")
+        #else:
+            #print(f"Winner is {winner}")
+        #self.print()
+        
+        self.starting_player_index = 1 - self.starting_player_index
+
         return winner
 
     def __move(self, from_pos: tuple[int, int], slide: Move, player_id: int) -> bool:
         '''Perform a move'''
+        #print(f"INTO __MOVE")
         if player_id > 2:
             return False
         prev_value = deepcopy(self._board[(from_pos[1], from_pos[0])])
         acceptable = self.__take((from_pos[1], from_pos[0]), player_id)
         if acceptable:
+            #print("TAKE VALIDO")
             acceptable = self.__slide((from_pos[1], from_pos[0]), slide)
             if not acceptable:
+                #print("SLIDE NON VALIDO")
                 self._board[(from_pos[1], from_pos[0])] = deepcopy(prev_value)
+        #else:
+            #print("TAKE NON VALIDO")
         return acceptable
 
     def __take(self, from_pos: tuple[int, int], player_id: int) -> bool:
@@ -136,6 +168,7 @@ class Game(object):
         ) and (self._board[from_pos] < 0 or self._board[from_pos] == player_id)
         if acceptable:
             self._board[from_pos] = player_id
+            #print(f"La presa {from_pos} è valida")
         return acceptable
 
     def __slide(self, from_pos: tuple[int, int], slide: Move) -> bool:
@@ -178,6 +211,7 @@ class Game(object):
         acceptable: bool = acceptable_top or acceptable_bottom or acceptable_left or acceptable_right
         # if it is
         if acceptable:
+            #print(f"La mossa {from_pos, slide} è valida")
             # take the piece
             piece = self._board[from_pos]
             # if the player wants to slide it to the left
